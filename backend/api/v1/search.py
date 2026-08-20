@@ -7,10 +7,11 @@ from schemas.search import SearchRequest, SearchResponse, SearchResult
 from rag.embeddings.base import get_embedding_provider
 from services.vector_service import QdrantService
 from repositories.chunk import ChunkRepository
+from core.rate_limit import rate_limit_user
 
 router = APIRouter()
 
-@router.post("/", response_model=SearchResponse)
+@router.post("/", response_model=SearchResponse, dependencies=[Depends(rate_limit_user(30, 60))])
 async def search_documents(
     request: SearchRequest,
     current_user: User = Depends(get_current_user),

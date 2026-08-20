@@ -22,7 +22,7 @@ app = FastAPI(
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,12 +31,30 @@ app.add_middleware(
 # Exception Handler
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
+    request_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "success": False,
-            "message": exc.message,
-            "error_code": exc.error_code
+            "error": {
+                "code": exc.error_code,
+                "message": exc.message,
+                "request_id": request_id
+            }
+        },
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception")
+    request_id = getattr(request.state, "request_id", None)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred.",
+                "request_id": request_id
+            }
         },
     )
 
@@ -44,12 +62,17 @@ async def app_exception_handler(request: Request, exc: AppException):
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     request_id = str(uuid.uuid4())
+    request.state.request_id = request_id
     start_time = time.time()
     
     # We will grab user_id and document_id from scope/state if they exist in later endpoints
     logger.info(f"Incoming Request | ID: {request_id} | {request.method} {request.url.path}")
     
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        logger.error(f"Request failed | ID: {request_id} | Error: {str(e)}")
+        raise e
     
     process_time = (time.time() - start_time) * 1000
     logger.info(f"Completed Request | ID: {request_id} | Status: {response.status_code} | Latency: {process_time:.2f}ms")

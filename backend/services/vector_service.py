@@ -102,11 +102,34 @@ class QdrantService:
             with_payload=True
         )
         
+        results = response.points
+        if not results:
+            return []
+            
         return [
             {
-                "chunk_id": str(res.id),
-                "score": res.score,
-                "payload": res.payload
+                "chunk_id": p.payload.get("chunk_id"),
+                "score": p.score,
+                "payload": p.payload
             }
-            for res in response.points
+            for p in results
         ]
+
+    async def delete_points_for_document(self, document_id: str | uuid.UUID, user_id: str | uuid.UUID):
+        """
+        Delete all points associated with a document_id and user_id.
+        """
+        logger.info(f"Deleting points for document '{document_id}', user: '{user_id}'")
+        
+        doc_filter = Filter(
+            must=[
+                FieldCondition(key="document_id", match=MatchValue(value=str(document_id))),
+                FieldCondition(key="user_id", match=MatchValue(value=str(user_id)))
+            ]
+        )
+        
+        await self.client.delete(
+            collection_name=self.collection_name,
+            points_selector=doc_filter
+        )
+        logger.info(f"Points deleted for document '{document_id}'")

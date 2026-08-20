@@ -1,6 +1,5 @@
 from typing import AsyncGenerator
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, Request
 import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -10,12 +9,21 @@ from core.exceptions import NotAuthorizedException
 from database.session import get_db
 from models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
-
 async def get_current_user(
+    request: Request,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
 ) -> User:
+    token = request.cookies.get("access_token")
+    if token and token.startswith("Bearer "):
+        token = token.split(" ")[1]
+        
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
+        raise NotAuthorizedException("Could not validate credentials")
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
