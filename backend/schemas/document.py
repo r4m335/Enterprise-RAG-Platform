@@ -9,8 +9,10 @@ class DocumentResponse(BaseModel):
     original_filename: str
     mime_type: Optional[str]
     file_size: Optional[int]
-    status: str
+    processing_status: str
     processing_error: Optional[str]
+    embedding_status: str
+    embedding_error: Optional[str]
     processed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # Qdrant Settings
     QDRANT_HOST: str = "qdrant"
     QDRANT_PORT: int = 6333
+    QDRANT_API_KEY: str | None = None
+    QDRANT_COLLECTION: str = "documents"
     
     # Storage Settings
     STORAGE_PATH: str = "/app/storage"
@@ -29,7 +31,9 @@ class Settings(BaseSettings):
     # LLM Settings (OpenAI / OpenRouter)
     OPENAI_API_KEY: str = ""
     LLM_PROVIDER: str = "openai"
-    EMBEDDING_MODEL: str = "BAAI/bge-large-en"
+    EMBEDDING_PROVIDER: str = "local"
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_DIMENSION: int = 384
     RERANKER_MODEL: str = "BAAI/bge-reranker-large"
     
     # Need absolute paths for dotenv to be reliable from anywhere

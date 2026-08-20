@@ -13,6 +13,12 @@ class DocumentStatus(str, enum.Enum):
     FAILED = "FAILED"
     DELETED = "DELETED"
 
+class EmbeddingStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -27,8 +33,11 @@ class Document(Base):
     storage_path = Column(String, nullable=False)
     storage_provider = Column(String, nullable=False, default="LOCAL")
     
-    status = Column(SQLEnum(DocumentStatus), nullable=False, default=DocumentStatus.UPLOADING)
+    processing_status = Column(SQLEnum(DocumentStatus), nullable=False, default=DocumentStatus.UPLOADING)
     processing_error = Column(String, nullable=True)
+    
+    embedding_status = Column(SQLEnum(EmbeddingStatus), nullable=False, default=EmbeddingStatus.PENDING)
+    embedding_error = Column(String, nullable=True)
     processed_at = Column(DateTime, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

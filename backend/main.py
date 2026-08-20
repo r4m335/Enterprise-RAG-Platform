@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from core.config import settings
 from core.exceptions import AppException
-from api.v1 import auth, documents
+from api.v1 import auth, documents, search
 
 # Setup logging
 logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="INFO")
@@ -81,3 +81,4 @@ async def health_check():
 # We will include routers here
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(documents.router, prefix=f"{settings.API_V1_STR}/documents", tags=["documents"])
+app.include_router(search.router, prefix=f"{settings.API_V1_STR}/search", tags=["search"])

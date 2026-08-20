@@ -34,3 +34,9 @@ class ChunkRepository:
             
         await self.db.commit()
         return chunks
+
+    async def get_chunks_by_ids(self, chunk_ids: List[uuid.UUID]) -> List[Chunk]:
+        from sqlalchemy import select
+        stmt = select(Chunk).where(Chunk.id.in_(chunk_ids))
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())

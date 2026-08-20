@@ -33,8 +33,9 @@ async def setup_user(db_session: AsyncSession):
 
 @pytest.fixture
 def mock_celery_task():
-    with patch("workers.tasks.document_processing.process_document_task.delay") as mock_delay:
-        yield mock_delay
+    with patch("workers.tasks.document_processing.process_document_task.delay") as mock_process:
+        with patch("workers.tasks.document_processing.embed_document_task.delay") as mock_embed:
+            yield mock_process
 
 @pytest.fixture
 def mock_session_maker(db_session):
@@ -76,7 +77,7 @@ async def test_end_to_end_document_ingestion(async_client: AsyncClient, db_sessi
     result = await db_session.execute(stmt)
     doc = result.scalar_one_or_none()
     assert doc is not None
-    assert doc.status == DocumentStatus.UPLOADED
+    assert doc.processing_status == DocumentStatus.UPLOADED
     assert doc.user_id == dummy_user_id
     
     # 4. Trigger the processing synchronously (mocking Celery worker)
@@ -85,7 +86,7 @@ async def test_end_to_end_document_ingestion(async_client: AsyncClient, db_sessi
     
     # 5. Verify Database state = COMPLETED
     await db_session.refresh(doc)
-    assert doc.status == DocumentStatus.COMPLETED
+    assert doc.processing_status == DocumentStatus.COMPLETED
     
     # 6. Verify Chunks exist and validate metadata/pagination
     stmt_chunks = select(Chunk).where(Chunk.document_id == uuid.UUID(document_id)).order_by(Chunk.page_number)
@@ -127,5 +128,5 @@ async def test_document_ingestion_failure(async_client: AsyncClient, db_session:
     stmt = select(Document).where(Document.id == uuid.UUID(document_id))
     result = await db_session.execute(stmt)
     doc = result.scalar_one_or_none()
-    assert doc.status == DocumentStatus.FAILED
+    assert doc.processing_status == DocumentStatus.FAILED
     assert doc.processing_error == "Parsing failed!"

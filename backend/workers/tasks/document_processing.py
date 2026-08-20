@@ -3,6 +3,7 @@ from datetime import datetime
 from celery import shared_task
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from database.session import AsyncSessionLocal
@@ -12,6 +13,7 @@ from rag.chunking import chunk_document
 from services.storage import get_storage_provider
 from repositories.document import DocumentRepository
 from repositories.chunk import ChunkRepository
+from .embedding import embed_document_task
 
 async def _process_document_async(document_id: str):
     logger.info(f"Starting processing for document {document_id}")
@@ -27,13 +29,13 @@ async def _process_document_async(document_id: str):
             logger.error(f"Document {document_id} not found.")
             return
             
-        if doc.status == DocumentStatus.COMPLETED:
+        if doc.processing_status == DocumentStatus.COMPLETED:
             logger.info(f"Document {document_id} is already COMPLETED. Skipping.")
             return
             
         try:
             # Mark as processing
-            doc = await doc_repo.update_document_status(document_id, DocumentStatus.PROCESSING)
+            doc = await doc_repo.update_document_processing_status(document_id, DocumentStatus.PROCESSING)
             
             # Fetch file
             storage = get_storage_provider(doc.storage_provider)
@@ -70,6 +72,9 @@ async def _process_document_async(document_id: str):
             )
             
             logger.info(f"Successfully processed document {document_id}")
+            
+            # Queue Embedding Task
+            embed_document_task.delay(document_id)
             
         except Exception as e:
             logger.exception(f"Failed to process document {document_id}")
