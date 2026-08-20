@@ -9,7 +9,7 @@ class DocumentStatus(str, enum.Enum):
     UPLOADING = "UPLOADING"
     UPLOADED = "UPLOADED"
     PROCESSING = "PROCESSING"
-    READY = "READY"
+    COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     DELETED = "DELETED"
 
@@ -29,6 +29,7 @@ class Document(Base):
     
     status = Column(SQLEnum(DocumentStatus), nullable=False, default=DocumentStatus.UPLOADING)
     processing_error = Column(String, nullable=True)
+    processed_at = Column(DateTime, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

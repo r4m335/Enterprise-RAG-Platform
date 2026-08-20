@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -15,6 +14,8 @@ RUN pip install uv
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 RUN uv sync --no-dev --no-install-project
 
 # Copy application code
