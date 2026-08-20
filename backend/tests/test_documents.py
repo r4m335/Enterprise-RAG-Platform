@@ -17,10 +17,12 @@ from workers.tasks.document_processing import _process_document_async
 dummy_user_id = uuid.uuid4()
 dummy_user = User(id=dummy_user_id, email="test_e2e@example.com")
 
-async def override_get_current_user():
-    return dummy_user
-
-app.dependency_overrides[get_current_user] = override_get_current_user
+@pytest.fixture
+async def token_factory():
+    def _create_token(user_id):
+        from core.security import create_access_token
+        return create_access_token(subject=str(user_id))
+    return _create_token
 
 @pytest.fixture(autouse=True)
 async def setup_user(db_session: AsyncSession):
@@ -52,15 +54,17 @@ def mock_session_maker(db_session):
         yield
 
 @pytest.mark.asyncio
-async def test_end_to_end_document_ingestion(async_client: AsyncClient, db_session: AsyncSession, mock_celery_task, mock_session_maker, tmp_path):
+async def test_end_to_end_document_ingestion(async_client: AsyncClient, db_session: AsyncSession, mock_celery_task, mock_session_maker, tmp_path, token_factory):
     # 1. Prepare a dummy PDF file
     file_content = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" # Very basic dummy PDF structure. But we might need a real-ish one.
     # Actually, PyMuPDF might crash on a fake PDF. Let's create a valid minimal markdown file instead since we support multiple types.
     test_md_content = b"# Test Document\n\nThis is a test paragraph that should be chunked properly. Page one."
     
     # 2. Upload the document via API
+    token = token_factory(dummy_user_id)
     response = await async_client.post(
         "/api/v1/documents/",
+        headers={"Authorization": f"Bearer {token}"},
         files={"file": ("test_doc.md", test_md_content, "text/markdown")}
     )
     
@@ -109,10 +113,12 @@ async def test_end_to_end_document_ingestion(async_client: AsyncClient, db_sessi
     assert len(chunks) == len(chunks_2)
     
 @pytest.mark.asyncio
-async def test_document_ingestion_failure(async_client: AsyncClient, db_session: AsyncSession, mock_celery_task, mock_session_maker):
+async def test_document_ingestion_failure(async_client: AsyncClient, db_session: AsyncSession, mock_celery_task, mock_session_maker, token_factory):
     # Upload an invalid file pretending to be text
+    token = token_factory(dummy_user_id)
     response = await async_client.post(
         "/api/v1/documents/",
+        headers={"Authorization": f"Bearer {token}"},
         files={"file": ("test_bad.md", b"BAD_BYTES_THAT_WILL_FAIL_PARSER", "text/markdown")}
     )
     

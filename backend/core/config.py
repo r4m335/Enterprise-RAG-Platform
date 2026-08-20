@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     # LLM Settings (OpenAI / OpenRouter)
     OPENAI_API_KEY: str = ""
     LLM_PROVIDER: str = "openai"
+    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_TEMPERATURE: float = 0.0
+    LLM_MAX_TOKENS: int = 1000
+    CHAT_HISTORY_MESSAGES: int = 5
+    
     EMBEDDING_PROVIDER: str = "local"
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
     EMBEDDING_DIMENSION: int = 384

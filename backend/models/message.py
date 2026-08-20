@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, ForeignKey, Integer
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from database.base import Base
 
 class Message(Base):
@@ -16,5 +16,7 @@ class Message(Base):
     model = Column(String, nullable=True) # e.g. "gpt-4o", "meta-llama/Llama-3-70b-chat-hf"
     prompt_tokens = Column(Integer, nullable=True)
     completion_tokens = Column(Integer, nullable=True)
+    
+    citations = Column(JSONB, nullable=True)
     
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
