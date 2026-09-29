@@ -35,26 +35,54 @@ Built with **FastAPI**, **Next.js 16**, **Qdrant**, **PostgreSQL**, **Redis**, a
 ## 🛠 System Architecture
 
 ```mermaid
-graph TD
-    Client[Next.js 16 Frontend] -->|HTTP / REST| Nginx[Nginx Reverse Proxy :80]
-    Nginx -->|/api/*| FastAPI[FastAPI Backend :8000]
-    Nginx -->|/*| Frontend[Next.js App :3000]
-    
-    FastAPI -->|Async ORM| Postgres[(PostgreSQL 15 :5434)]
-    FastAPI -->|Rate Limiting & Broker| Redis[(Redis 7 :6379)]
-    FastAPI -->|Vector Search| Qdrant[(Qdrant Vector DB :6333)]
-    
-    FastAPI -->|Dispatches Tasks| Celery[Celery Distributed Worker]
-    Celery -->|Embeddings| LocalEmbeddings[Local BGE-Small Model]
-    Celery -->|Upsert Vectors| Qdrant
-    
-    FastAPI -->|RAG Queries| FallbackLLM[Multi-Provider LLM Fallback Chain]
-    FallbackLLM --> Ollama[Ollama Cloud]
-    FallbackLLM --> Groq[Groq API]
-    FallbackLLM --> HF[Hugging Face Router]
-    FallbackLLM --> NVIDIA[NVIDIA NIM]
-    FallbackLLM --> Cloudflare[Cloudflare Workers AI]
-    FallbackLLM --> OpenAI[OpenAI API]
+flowchart TD
+    subgraph UI["User Interface"]
+        Client["Next.js 16 Web App"]
+    end
+
+    subgraph Gateway["Reverse Proxy"]
+        Nginx["Nginx Gateway"]
+    end
+
+    subgraph CoreBackend["Application Core"]
+        FastAPI["FastAPI Backend"]
+        CeleryWorker["Celery Worker"]
+    end
+
+    subgraph DataStorage["Data & State Layer"]
+        Postgres[("PostgreSQL 15")]
+        Redis[("Redis 7")]
+        Qdrant[("Qdrant Vector DB")]
+    end
+
+    subgraph LLMChain["LLM Fallback Engine"]
+        Ollama["Ollama Cloud (gpt-oss:20b)"]
+        Groq["Groq (Llama 3.3 70B)"]
+        HF["Hugging Face Router"]
+        NVIDIA["NVIDIA NIM"]
+        Cloudflare["Cloudflare Workers AI"]
+        OpenAI["OpenAI (gpt-4o-mini)"]
+    end
+
+    Client -->|"HTTP Requests"| Nginx
+    Nginx -->|"Proxy /api"| FastAPI
+    Nginx -->|"Web Pages"| Client
+
+    FastAPI -->|"CRUD / Metadata"| Postgres
+    FastAPI -->|"Rate Limiting"| Redis
+    FastAPI -->|"Vector Search"| Qdrant
+    FastAPI -->|"Enqueue Document Jobs"| CeleryWorker
+
+    CeleryWorker -->|"Local BGE Embeddings"| Qdrant
+    CeleryWorker -->|"Fetch Tasks"| Redis
+
+    FastAPI -->|"Inference Request"| LLMChain
+    LLMChain --> Ollama
+    LLMChain --> Groq
+    LLMChain --> HF
+    LLMChain --> NVIDIA
+    LLMChain --> Cloudflare
+    LLMChain --> OpenAI
 ```
 
 ---
