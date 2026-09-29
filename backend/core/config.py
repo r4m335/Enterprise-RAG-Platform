@@ -28,10 +28,27 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     
-    # LLM Settings (OpenAI / OpenRouter)
+    # LLM Settings & Multi-Provider Keys
+    OLLAMA_API_KEY: str = ""
+    OLLAMA_URL: str = "https://ollama.com/api/chat"
+    OLLAMA_MODEL: str = "gpt-oss:20b"
+    
+    GROQ_API_KEY: str = ""
+    HUGGINGFACE_API_KEY: str = ""
+    NVIDIA_API_KEY: str = ""
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+    CLOUDFLARE_API_TOKEN: str = ""
+    POLLINATIONS_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
-    LLM_PROVIDER: str = "openai"
-    LLM_MODEL: str = "gpt-4o-mini"
+    GEMINI_API_KEY: str = ""
+    MISTRAL_API_KEY: str = ""
+    COHERE_API_KEY: str = ""
+    SAMBANOVA_API_KEY: str = ""
+    CEREBRAS_API_KEY: str = ""
+    
+    LLM_PROVIDER: str = "ollama"
+    LLM_MODEL: str = "gpt-oss:20b"
     LLM_TEMPERATURE: float = 0.0
     LLM_MAX_TOKENS: int = 1000
     CHAT_HISTORY_MESSAGES: int = 5

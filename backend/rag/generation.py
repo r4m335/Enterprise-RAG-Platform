@@ -1,3 +1,4 @@
+import re
 import uuid
 from typing import List, Tuple, Dict, Any
 from loguru import logger
@@ -24,7 +25,7 @@ class GenerationService:
         1. Retrieve chunks
         2. Build Context
         3. Call LLM
-        4. Return answer and mapped citations
+        4. Extract cited sources and map accurate citations
         """
         
         # 1. Retrieval
@@ -40,14 +41,45 @@ class GenerationService:
         # 3. Generation
         llm_response = await self.llm.generate(messages)
         
-        # 4. Map Citations
+        # 4. Extract source attribution
+        content = llm_response.content
+        sources_match = re.search(r"\[SOURCES_USED:\s*([0-9,\s]+)\]", content, re.IGNORECASE)
+        
+        used_indices = []
+        if sources_match:
+            raw_nums = sources_match.group(1)
+            # Remove the [SOURCES_USED: ...] tag from response text
+            llm_response.content = re.sub(r"\n*\[SOURCES_USED:[^\]]*\]", "", content).strip()
+            for num_str in raw_nums.split(","):
+                try:
+                    idx = int(num_str.strip()) - 1
+                    if 0 <= idx < len(retrieved_chunks):
+                        used_indices.append(idx)
+                except ValueError:
+                    pass
+        else:
+            # Clean if output [SOURCES_USED: NONE] or similar
+            llm_response.content = re.sub(r"\n*\[SOURCES_USED:[^\]]*\]", "", content).strip()
+
+        # If LLM identified specific sources, cite ONLY those sources!
+        if used_indices:
+            candidate_chunks = [retrieved_chunks[i] for i in used_indices]
+        else:
+            candidate_chunks = retrieved_chunks
+
+        # Deduplicate citations by (document_id, page_number)
+        seen_keys = set()
         citations = []
-        for chunk in retrieved_chunks:
-            citations.append({
-                "chunk_id": chunk.chunk_id,
-                "document_id": chunk.document_id,
-                "page_number": chunk.page_number,
-                "score": chunk.score
-            })
+        for chunk in candidate_chunks:
+            key = (chunk.document_id, chunk.page_number)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                citations.append({
+                    "chunk_id": chunk.chunk_id,
+                    "document_id": chunk.document_id,
+                    "document_name": getattr(chunk, "document_name", None),
+                    "page_number": chunk.page_number,
+                    "score": chunk.score
+                })
             
         return llm_response, citations

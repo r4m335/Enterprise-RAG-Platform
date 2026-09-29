@@ -28,3 +28,18 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             yield session
         finally:
             await session.close()
+
+def get_task_session():
+    """
+    Creates an isolated async session with NullPool for Celery background tasks.
+    Prevents cross-process and cross-event-loop connection sharing conflicts.
+    """
+    from sqlalchemy.pool import NullPool
+    task_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool, echo=False)
+    session_factory = async_sessionmaker(
+        bind=task_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False
+    )
+    return task_engine, session_factory

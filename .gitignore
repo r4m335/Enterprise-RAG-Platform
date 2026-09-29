@@ -21,7 +21,6 @@ var/
 *.egg
 
 # Virtual environments
-.env
 .venv
 env/
 venv/
@@ -29,8 +28,15 @@ ENV/
 env.bak/
 venv.bak/
 
-# Node
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Next.js / Node
 node_modules/
+.next/
+out/
 dist/
 build/
 .npm
@@ -38,12 +44,28 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Database & Storage
+# Large ML Models & Model Weights
+backend/models/
+models/
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pt.*
+*.ckpt
+
+# Local Storage, Data, & Uploads
 storage/
 postgres_data/
 postgres_test_data/
 redis_data/
 qdrant_data/
+Test pdf/
+test pdf/
+*.pdf
+
+# Scratch / Temporary debugging scripts
+scratch/
 
 # IDE / OS
 .idea/
@@ -65,10 +87,3 @@ coverage.xml
 # Logs
 logs/
 *.log
-
-# Alembic
-# alembic.ini (safe to commit since we override URL dynamically in env.py)
-
-# (Optional depending on how you manage Alembic config, but it usually contains local DB URL)
-# If you want to commit alembic.ini, just uncomment the line below or remove it from gitignore.
-# We will not ignore alembic/versions though.

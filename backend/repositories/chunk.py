@@ -40,3 +40,15 @@ class ChunkRepository:
         stmt = select(Chunk).where(Chunk.id.in_(chunk_ids))
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_chunks_with_documents_by_ids(self, chunk_ids: List[uuid.UUID]):
+        from sqlalchemy import select
+        from models.document import Document
+        stmt = (
+            select(Chunk, Document.original_filename, Document.filename)
+            .join(Document, Chunk.document_id == Document.id, isouter=True)
+            .where(Chunk.id.in_(chunk_ids))
+        )
+        result = await self.db.execute(stmt)
+        return result.all()
+

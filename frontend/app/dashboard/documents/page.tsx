@@ -31,7 +31,7 @@ export default function DocumentsPage() {
       const data = await fetchClient("/api/v1/documents/");
       setDocuments(data);
     } catch (e) {
-      console.error(e);
+      // Ignore network errors or aborted fetches during redirects
     } finally {
       setLoading(false);
     }

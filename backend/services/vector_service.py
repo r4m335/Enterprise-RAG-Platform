@@ -14,7 +14,8 @@ class QdrantService:
         
         self.client = AsyncQdrantClient(
             url=url,
-            api_key=settings.QDRANT_API_KEY
+            api_key=settings.QDRANT_API_KEY,
+            timeout=60.0
         )
         self.collection_name = settings.QDRANT_COLLECTION
 

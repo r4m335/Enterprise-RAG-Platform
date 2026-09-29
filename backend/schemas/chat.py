@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
 class Citation(BaseModel):
     chunk_id: uuid.UUID
     document_id: uuid.UUID
+    document_name: Optional[str] = None
     page_number: Optional[int] = None
     score: float
 

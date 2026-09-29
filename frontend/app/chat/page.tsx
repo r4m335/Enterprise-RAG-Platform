@@ -8,9 +8,11 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 interface Citation {
   document_id: string;
+  document_name?: string;
   chunk_id: string;
   page_number?: number;
   score: number;
@@ -150,7 +152,7 @@ export default function ChatPage() {
         </div>
         
         <div className="flex-1 overflow-auto p-6" ref={scrollRef}>
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
             {messages.length === 0 ? (
               <div className="text-center text-zinc-500 mt-20">
                 <h3 className="text-xl font-medium mb-2">Welcome to Enterprise RAG</h3>
@@ -159,19 +161,35 @@ export default function ChatPage() {
             ) : (
               messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-lg p-4 ${msg.role === "user" ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900" : "bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 shadow-sm"}`}>
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className={`rounded-xl p-5 ${
+                    msg.role === "user" 
+                      ? "max-w-[85%] bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900 shadow-sm" 
+                      : "max-w-full w-full bg-white border border-zinc-200/80 dark:bg-zinc-900 dark:border-zinc-800 shadow-sm"
+                  }`}>
+                    {msg.role === "user" ? (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
+                    ) : (
+                      <MarkdownRenderer content={msg.content} />
+                    )}
                     
                     {msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
-                        <p className="text-xs font-semibold mb-2 text-zinc-500">Sources:</p>
-                        <ul className="space-y-1">
-                          {msg.citations.map((c, i) => (
-                            <li key={i} className="text-xs text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded inline-block mr-2 mb-2">
-                              {c.document_id.slice(0,8)} {c.page_number ? `(Page ${c.page_number})` : ''} - {(c.score * 100).toFixed(1)}% match
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="mt-4 pt-3 border-t border-zinc-200/80 dark:border-zinc-800">
+                        <p className="text-xs font-semibold mb-2 text-zinc-500 dark:text-zinc-400">Sources & Citations:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {msg.citations.map((c, i) => {
+                            const name = c.document_name || `Doc ${c.document_id.slice(0, 8)}`;
+                            return (
+                              <span key={i} className="inline-flex items-center gap-1.5 text-xs text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-md border border-zinc-200/80 dark:border-zinc-700/70 font-medium">
+                                <svg className="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                                <span>{name}</span>
+                                {c.page_number ? <span className="text-zinc-400 dark:text-zinc-500">• Page {c.page_number}</span> : null}
+                                <span className="text-zinc-400 dark:text-zinc-500 font-mono">• {(c.score * 100).toFixed(1)}% match</span>
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -190,7 +208,7 @@ export default function ChatPage() {
 
         {/* Input Area */}
         <div className="p-4 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
-          <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex gap-4">
+          <form onSubmit={sendMessage} className="max-w-4xl mx-auto flex gap-4">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}

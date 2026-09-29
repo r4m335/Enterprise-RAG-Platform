@@ -80,8 +80,8 @@ async def process_upload(file: UploadFile, user_id: uuid.UUID, db: AsyncSession)
     )
     
     # Enqueue Celery Task
-    from workers.tasks.document_processing import process_document_task
-    process_document_task.delay(str(doc.id))
+    from workers.celery_app import celery_app
+    celery_app.send_task("workers.tasks.document_processing.process_document_task", args=[str(doc.id)])
     
     return UploadResponse(
         message="File uploaded successfully and processing started.",

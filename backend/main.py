@@ -22,7 +22,16 @@ app = FastAPI(
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:80",
+        "http://127.0.0.1:80",
+        "http://localhost:8000",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,7 +41,8 @@ app.add_middleware(
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
     request_id = getattr(request.state, "request_id", None)
-    return JSONResponse(
+    origin = request.headers.get("origin") or "http://localhost:3000"
+    response = JSONResponse(
         status_code=exc.status_code,
         content={
             "error": {
@@ -42,21 +52,28 @@ async def app_exception_handler(request: Request, exc: AppException):
             }
         },
     )
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled exception")
     request_id = getattr(request.state, "request_id", None)
-    return JSONResponse(
+    origin = request.headers.get("origin") or "http://localhost:3000"
+    response = JSONResponse(
         status_code=500,
         content={
             "error": {
                 "code": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred.",
+                "message": str(exc) if settings.ENVIRONMENT == "development" else "An unexpected error occurred.",
                 "request_id": request_id
             }
         },
     )
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Logging Middleware
 @app.middleware("http")

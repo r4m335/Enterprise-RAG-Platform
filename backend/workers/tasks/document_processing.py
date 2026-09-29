@@ -8,84 +8,86 @@ from loguru import logger
 
 from database.session import AsyncSessionLocal
 from models.document import DocumentStatus
-from rag.parser import parse_document
-from rag.chunking import chunk_document
 from services.storage import get_storage_provider
 from repositories.document import DocumentRepository
 from repositories.chunk import ChunkRepository
-from .embedding import embed_document_task
 
 async def _process_document_async(document_id: str):
+    from rag.parser import parse_document
+    from rag.chunking import chunk_document
+    from .embedding import embed_document_task
+    from database.session import get_task_session
     logger.info(f"Starting processing for document {document_id}")
     
-    async with AsyncSessionLocal() as session:
-        doc_repo = DocumentRepository(session)
-        chunk_repo = ChunkRepository(session)
-        
-        # Load Document
-        doc = await doc_repo.get_document_by_id(document_id)
-        
-        if not doc:
-            logger.error(f"Document {document_id} not found.")
-            return
+    task_engine, TaskSession = get_task_session()
+    try:
+        async with TaskSession() as session:
+            doc_repo = DocumentRepository(session)
+            chunk_repo = ChunkRepository(session)
             
-        if doc.processing_status == DocumentStatus.COMPLETED:
-            logger.info(f"Document {document_id} is already COMPLETED. Skipping.")
-            return
+            # Load Document
+            doc = await doc_repo.get_document_by_id(document_id)
             
-        try:
-            # Mark as processing
-            doc = await doc_repo.update_document_processing_status(document_id, DocumentStatus.PROCESSING)
-            
-            # Fetch file
-            storage = get_storage_provider(doc.storage_provider)
-            file_stream = await storage.get(doc.storage_path)
-            file_bytes = file_stream.read()
-            file_stream.close()
-            
-            # Delete existing chunks if retrying
-            await chunk_repo.delete_chunks_by_document_id(document_id)
-            
-            # Parse Document
-            parsed_doc = parse_document(file_bytes, doc.mime_type)
-            
-            # Chunk Document
-            chunks = chunk_document(parsed_doc)
-            
-            # Persist Chunks
-            chunks_data = [
-                {
-                    "text": c.text,
-                    "token_count": c.token_count,
-                    "page_number": c.page_number,
-                    "metadata_": c.metadata
-                }
-                for c in chunks
-            ]
-            await chunk_repo.bulk_create_chunks(document_id, chunks_data)
+            if not doc:
+                logger.error(f"Document {document_id} not found.")
+                return
                 
-            # Update Document status
-            await doc_repo.update_document_processing_result(
-                document_id, 
-                status=DocumentStatus.COMPLETED,
-                processed_at=datetime.utcnow()
-            )
-            
-            logger.info(f"Successfully processed document {document_id}")
-            
-            # Queue Embedding Task
-            embed_document_task.delay(document_id)
-            
-        except Exception as e:
-            logger.exception(f"Failed to process document {document_id}")
-            await session.rollback()
-            await doc_repo.update_document_processing_result(
-                document_id, 
-                status=DocumentStatus.FAILED,
-                error_msg=str(e),
-                processed_at=datetime.utcnow()
-            )
-            raise e
+            if doc.processing_status == DocumentStatus.COMPLETED:
+                logger.info(f"Document {document_id} is already COMPLETED. Skipping.")
+                return
+                
+            try:
+                # Mark as processing
+                doc.processing_status = DocumentStatus.PROCESSING
+                await session.commit()
+                
+                # Fetch file
+                storage = get_storage_provider(doc.storage_provider)
+                file_stream = await storage.get(doc.storage_path)
+                file_bytes = file_stream.read()
+                file_stream.close()
+                
+                # Delete existing chunks if retrying
+                await chunk_repo.delete_chunks_by_document_id(document_id)
+                
+                # Parse Document
+                parsed_doc = parse_document(file_bytes, doc.mime_type)
+                
+                # Chunk Document
+                chunks = chunk_document(parsed_doc)
+                
+                # Persist Chunks
+                chunks_data = [
+                    {
+                        "text": c.text,
+                        "token_count": c.token_count,
+                        "page_number": c.page_number,
+                        "metadata_": c.metadata
+                    }
+                    for c in chunks
+                ]
+                await chunk_repo.bulk_create_chunks(document_id, chunks_data)
+                    
+                # Update Document status
+                doc.processing_status = DocumentStatus.COMPLETED
+                doc.processed_at = datetime.utcnow()
+                await session.commit()
+                
+                logger.info(f"Successfully processed document {document_id}")
+                
+                # Queue Embedding Task
+                embed_document_task.delay(document_id)
+                
+            except Exception as e:
+                logger.exception(f"Failed to process document {document_id}")
+                await session.rollback()
+                doc.processing_status = DocumentStatus.FAILED
+                doc.processing_error = str(e)
+                doc.processed_at = datetime.utcnow()
+                await session.commit()
+                raise e
+    finally:
+        await task_engine.dispose()
 
 @shared_task(bind=True, max_retries=3)
 def process_document_task(self, document_id: str):

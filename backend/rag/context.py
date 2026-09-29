@@ -9,6 +9,10 @@ Answer using the supplied document context.
 If the context does not contain enough information, state that the information is unavailable.
 
 Do not invent facts or sources. Do not hallucinate document identifiers.
+
+At the very end of your response, on a new line, specify the source number(s) that directly contain the facts used to answer the question, using this exact format:
+[SOURCES_USED: 1, 2]
+If no sources contained the answer, output: [SOURCES_USED: NONE]
 """
 
     @staticmethod

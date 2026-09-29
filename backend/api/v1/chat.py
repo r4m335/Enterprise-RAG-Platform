@@ -122,17 +122,54 @@ async def get_conversation(
         
     messages = await msg_repo.get_recent_for_conversation(conversation_id, limit=50) # Get all recent
     
+    # Enrich citations with document_name if missing
+    all_doc_ids = set()
+    for m in messages:
+        if m.citations:
+            for c in m.citations:
+                if isinstance(c, dict) and c.get("document_id") and not c.get("document_name"):
+                    all_doc_ids.add(c["document_id"])
+    
+    doc_name_map = {}
+    if all_doc_ids:
+        from models.document import Document
+        from sqlalchemy import select
+        valid_uuids = []
+        for did in all_doc_ids:
+            try:
+                valid_uuids.append(uuid.UUID(str(did)))
+            except (ValueError, TypeError):
+                pass
+        if valid_uuids:
+            doc_stmt = select(Document.id, Document.original_filename, Document.filename).where(Document.id.in_(valid_uuids))
+            doc_res = await db.execute(doc_stmt)
+            for d in doc_res.all():
+                doc_name_map[str(d[0])] = d[1] or d[2]
+                
+    enriched_messages = []
+    for m in messages:
+        cites = m.citations
+        if cites and doc_name_map:
+            new_cites = []
+            for c in cites:
+                if isinstance(c, dict):
+                    c_copy = dict(c)
+                    if not c_copy.get("document_name"):
+                        c_copy["document_name"] = doc_name_map.get(str(c_copy.get("document_id")), f"Doc {str(c_copy.get('document_id'))[:8]}")
+                    new_cites.append(c_copy)
+                else:
+                    new_cites.append(c)
+            cites = new_cites
+        enriched_messages.append({
+            "id": str(m.id),
+            "role": m.role,
+            "content": m.content,
+            "citations": cites,
+            "timestamp": m.timestamp
+        })
+
     return {
         "id": str(conversation.id),
         "created_at": conversation.created_at,
-        "messages": [
-            {
-                "id": str(m.id),
-                "role": m.role,
-                "content": m.content,
-                "citations": m.citations,
-                "timestamp": m.timestamp
-            }
-            for m in messages
-        ]
+        "messages": enriched_messages
     }

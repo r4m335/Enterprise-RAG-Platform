@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Ensure backend root is on sys.path across all Celery worker processes/forks
+backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if backend_root not in sys.path:
+    sys.path.insert(0, backend_root)
+
 from celery import Celery
 from core.config import settings
 
@@ -5,7 +13,10 @@ celery_app = Celery(
     "enterprise_rag",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["workers.tasks.document_processing"]
+    include=[
+        "workers.tasks.document_processing",
+        "workers.tasks.embedding"
+    ]
 )
 
 celery_app.conf.update(
