@@ -4,15 +4,14 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-build/
+/build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -21,7 +20,8 @@ var/
 *.egg
 
 # Virtual environments
-.venv
+.venv/
+backend/.venv/
 env/
 venv/
 ENV/
@@ -38,15 +38,20 @@ node_modules/
 .next/
 out/
 dist/
-build/
 .npm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+frontend/tsconfig.tsbuildinfo
+
+# Playwright & Testing
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Large ML Models & Model Weights
-backend/models/
-models/
+backend/models/bge-small-en-v1.5/
 *.safetensors
 *.bin
 *.onnx
@@ -55,7 +60,8 @@ models/
 *.ckpt
 
 # Local Storage, Data, & Uploads
-storage/
+/storage/
+/backend/storage/
 postgres_data/
 postgres_test_data/
 redis_data/
@@ -75,6 +81,7 @@ scratch/
 .DS_Store
 Thumbs.db
 .gemini/
+.agents/
 
 # Pytest / Coverage
 .pytest_cache/
@@ -87,3 +94,7 @@ coverage.xml
 # Logs
 logs/
 *.log
+
+# Explicit whitelisting for source code folders
+!frontend/lib/
+!backend/services/storage/

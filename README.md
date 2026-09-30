@@ -8,16 +8,15 @@ Built with **FastAPI**, **Next.js 16**, **Qdrant**, **PostgreSQL**, **Redis**, a
 
 ## 🌟 Key Highlights & Features
 
-- **Document Ingestion Pipeline**: Asynchronous parsing and chunking of PDF, DOCX, TXT, and Markdown documents.
+- **Document Ingestion Pipeline**: Asynchronous parsing, chunking, and real-time multi-stage progress tracking (Upload ➔ Extract & Chunk ➔ Vector Index ➔ Ready) for PDF, DOCX, TXT, and Markdown documents.
 - **Multi-Provider LLM Fallback Engine**: Resilient multi-tier fallback architecture ensuring zero-downtime chat:
   1. **Ollama Cloud** (`gpt-oss:20b`)
   2. **Groq** (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`)
   3. **Hugging Face Inference Router** (`Qwen2.5-72B-Instruct`, `Llama-3.2-3B`)
   4. **NVIDIA NIM** (`meta/llama-3.1-70b-instruct`)
   5. **Cloudflare Workers AI** (`@cf/meta/llama-3.1-8b-instruct`)
-  6. **Pollinations AI** (Free zero-setup endpoint)
-  7. **OpenAI** (`gpt-4o-mini`)
-  8. **Deterministic Extractive Fallback**
+  6. **OpenAI** (`gpt-4o-mini`)
+  7. **Deterministic Extractive Fallback**
 - **Offline High-Speed Vector Embeddings**: Local snapshot of `BAAI/bge-small-en-v1.5` (384-dim) loaded offline inside the container (~300ms vector search, eliminating network latency or HF Hub stalls).
 - **Exact Source Attribution & Deduplication**:
   - RAG prompt extracts exact source references from the LLM (e.g. `[SOURCES_USED: 2]`).
